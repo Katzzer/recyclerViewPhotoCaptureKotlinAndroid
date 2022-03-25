@@ -8,10 +8,12 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Bundle
+import android.provider.MediaStore
 import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Button
 import androidx.activity.result.ActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.app.ActivityCompat
@@ -38,16 +40,18 @@ class FirstFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-
-//        val startForResult = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result: ActivityResult ->
-//            if (result.resultCode == Activity.RESULT_OK) {
-//                result.data
-//            }
-//        }
-//
-//        startForResult.launch(Intent(activity, MainActivity::class.java))
-
+        var buttonCapturePhoto = view.findViewById<Button>(R.id.button)
+        buttonCapturePhoto.setOnClickListener {
+            capturePhoto()
+        }
         setRecyclerViewForTesting()
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == CAMERA_REQUEST_CODE) {
+            print("photo captured")
+        }
     }
 
     private fun setRecyclerViewForTesting() {
@@ -61,6 +65,19 @@ class FirstFragment : Fragment() {
             val adapter = RecyclerAdapterFirma(requireContext(), requireActivity())
             recyclerView.adapter = adapter
         }
+    }
+
+    private fun capturePhoto() {
+        if (getCameraPermission(requireContext())) {
+            val cameraIntent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
+            startActivityForResult(cameraIntent, CAMERA_REQUEST_CODE)
+        } else {
+            ActivityCompat.requestPermissions(requireActivity(), arrayOf(Manifest.permission.CAMERA), CAMERA_REQUEST_CODE)
+        }
+    }
+
+    private fun getCameraPermission (context: Context):Boolean {
+        return ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
     }
 
 
