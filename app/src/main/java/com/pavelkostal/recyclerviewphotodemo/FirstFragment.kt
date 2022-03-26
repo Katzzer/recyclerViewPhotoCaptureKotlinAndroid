@@ -4,23 +4,35 @@ import android.Manifest
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
 import android.os.Bundle
 import android.provider.MediaStore
-import androidx.fragment.app.Fragment
+import android.util.Base64
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.github.chrisbanes.photoview.PhotoView
+import java.io.ByteArrayOutputStream
+
 
 class FirstFragment : Fragment() {
     companion object {
         const val IMAGE_REQUEST_CODE = 100
         const val CAMERA_REQUEST_CODE = 200
+        private var i = 0
     }
+
+    private lateinit var adapter: RecyclerAdapter
+    private var listText = arrayListOf("McDonald's", "HP")
+    private var listImages = arrayListOf("", "")
+    private lateinit var imageView: PhotoView
+    private var positionInAdapter:Int = 9999
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -31,17 +43,23 @@ class FirstFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        val buttonCapturePhoto = view.findViewById<Button>(R.id.button)
-        buttonCapturePhoto.setOnClickListener {
+        setRecyclerViewForTesting()
+        imageView = view.findViewById(R.id.photoView)
+
+        view.findViewById<Button>(R.id.cameraButton).setOnClickListener {
             capturePhoto()
         }
-        setRecyclerViewForTesting()
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         if (requestCode == CAMERA_REQUEST_CODE) {
-            print("photo captured")
+
+            adapter.notifyItemChanged(positionInAdapter)
+            val bitmap = data?.extras?.get("data") as Bitmap
+            imageView.setImageBitmap(bitmap)
+            listImages[positionInAdapter] = bitMapToString(bitmap)
+
         }
     }
 
@@ -50,37 +68,25 @@ class FirstFragment : Fragment() {
         val layoutManager = LinearLayoutManager(requireContext())
         recyclerView.layoutManager = layoutManager
 
-        val list = listOf("item1", "item2")
 
-        val adapter = RecyclerAdapter(list, object : RecyclerAdapter.OnItemClickListener {
+
+        adapter = RecyclerAdapter(listText, listImages, object : RecyclerAdapter.OnItemClickListener {
             override fun onItemClick(view: View, position: Int) {
-                // Listen your click event here
+                 // Listen your click event here
                 capturePhoto().also { result ->
-                    // do something
-
-                    // dont forget to call notifyItem if you want to update an item in
-                    // RecyclerView
-//                    adapter.notifyItemChanged(position)
+                    positionInAdapter = position
                 }
             }
-        })
+        }, this)
         recyclerView.adapter = adapter
 
     }
 
-//    fun capturePhoto() {
-//        if (getCameraPermission(requireContext())) {
-//            val cameraIntent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
-//            startActivityForResult(requireActivity(), cameraIntent, CAMERA_REQUEST_CODE, null)
-//        } else {
-//            ActivityCompat.requestPermissions(requireActivity(), arrayOf(Manifest.permission.CAMERA), CAMERA_REQUEST_CODE)
-//        }
-//    }
 
     private fun capturePhoto() {
         if (getCameraPermission(requireContext())) {
-            val cameraIntent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
-            startActivityForResult(cameraIntent, CAMERA_REQUEST_CODE)
+            val photo = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
+            startActivityForResult(photo, CAMERA_REQUEST_CODE)
         } else {
             ActivityCompat.requestPermissions(requireActivity(), arrayOf(Manifest.permission.CAMERA), CAMERA_REQUEST_CODE)
         }
@@ -88,6 +94,13 @@ class FirstFragment : Fragment() {
 
     private fun getCameraPermission(context: Context): Boolean {
         return ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
+    }
+
+    private fun bitMapToString(bitmap: Bitmap): String {
+        val baos = ByteArrayOutputStream()
+        bitmap.compress(Bitmap.CompressFormat.JPEG, 100, baos)
+        val b = baos.toByteArray()
+        return Base64.encodeToString(b, Base64.NO_WRAP)
     }
 
 }
